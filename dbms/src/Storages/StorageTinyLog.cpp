@@ -134,7 +134,7 @@ public:
 
 private:
     StorageTinyLog & storage;
-    std::unique_lock<std::shared_mutex> lock;
+    std::shared_lock<std::shared_mutex> lock;
     bool done = false;
 
     struct Stream
@@ -281,6 +281,8 @@ void TinyLogBlockOutputStream::writeSuffix()
     if (streams.empty())
         return;
 
+    std::unique_lock<std::shared_mutex> write_lock(storage.rwlock);
+
     WrittenStreams written_streams;
     IDataType::SerializeBinaryBulkSettings settings;
     for (const auto & column : getHeader())
@@ -309,6 +311,8 @@ void TinyLogBlockOutputStream::writeSuffix()
 
 void TinyLogBlockOutputStream::write(const Block & block)
 {
+    std::unique_lock<std::shared_mutex> write_lock(storage.rwlock);
+
     storage.check(block, true);
 
     /// The set of written offset columns so that you do not write shared columns for nested structures multiple times
