@@ -1,0 +1,48 @@
+---
+name: build
+
+on:
+    push:
+        paths-ignore:
+            - '**.md'
+            - 'docs'
+            - 'tests'
+
+jobs:
+    relwithdebuginfo:
+        runs-on: ubuntu-latest
+        if: "!contains(github.event.head_commit.message, 'ci skip')"
+
+        steps:
+            - uses: actions/checkout@v2
+              with:
+                  submodules: recursive
+            # XXX: possible issues due to space usage
+            - uses: actions/cache@v1.1.0
+              with:
+                  path: /ccache
+                  key: ccache
+            # TODO:
+            # - generate version
+            - name: build
+              shell: bash
+              run:
+                  docker run
+                    --rm
+                    --volume=$PWD:/build
+                    --volume=/out:/output
+                    --volume=/ccache:/ccache
+                    -e DEB_CC=gcc-9
+                    -e DEB_CXX=g++-9
+                    -e CCACHE_DIR=/ccache
+                    -e CCACHE_BASEDIR=/build
+                    -e CCACHE_NOHASHDIR=true
+                    -e CCACHE_COMPILERCHECK=content
+                    -e VERSION_STRING='20.5~azat'
+                    -e AUTHOR='azat'
+                    -e CMAKE_FLAGS='-DADD_GDB_INDEX_FOR_GOLD=1'
+                    yandex/clickhouse-deb-builder
+            - uses: actions/upload-artifact@v1
+              with:
+                  name: packages
+                  path: "/out/*.deb"
