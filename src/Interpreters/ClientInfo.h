@@ -58,6 +58,9 @@ public:
     String initial_query_id;
     Poco::Net::SocketAddress initial_address;
 
+    /// For previousQueryId() (useful mostly in tests)
+    String previous_query_id;
+
     /// All below are parameters related to initial query.
 
     Interface interface = Interface::TCP;

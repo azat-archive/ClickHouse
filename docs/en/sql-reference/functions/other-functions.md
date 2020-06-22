@@ -1602,4 +1602,9 @@ Result:
 10	10	19	19	39	39
 ```
 
+
+## previousQueryId() {#previousQueryId}
+
+Returns a `query_id` for the previous query (tracks only queries for which `log_queries` is enabled).
+
 [Original article](https://clickhouse.tech/docs/en/query_language/functions/other_functions/) <!--hide-->

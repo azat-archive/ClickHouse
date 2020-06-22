@@ -354,6 +354,7 @@ public:
 
     String getCurrentDatabase() const;
     String getCurrentQueryId() const;
+    String getPreviousQueryId() const;
 
     /// Id of initiating query for distributed queries; or current query id if it's not a distributed query.
     String getInitialQueryId() const;

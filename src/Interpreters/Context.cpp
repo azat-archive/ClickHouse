@@ -1081,6 +1081,10 @@ String Context::getCurrentQueryId() const
 {
     return client_info.current_query_id;
 }
+String Context::getPreviousQueryId() const
+{
+    return client_info.previous_query_id;
+}
 
 
 String Context::getInitialQueryId() const
@@ -1146,6 +1150,8 @@ void Context::setCurrentQueryId(const String & query_id)
         query_id_to_set = QueryUUID(random.bytes, Poco::UUID::UUID_RANDOM).toString();
     }
 
+    if (settings.log_queries)
+        client_info.previous_query_id = client_info.current_query_id;
     client_info.current_query_id = query_id_to_set;
 }
 

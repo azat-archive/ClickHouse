@@ -39,6 +39,7 @@ void registerFunctionIsNaN(FunctionFactory &);
 void registerFunctionIfNotFinite(FunctionFactory &);
 void registerFunctionThrowIf(FunctionFactory &);
 void registerFunctionVersion(FunctionFactory &);
+void registerFunctionPreviousQueryId(FunctionFactory &);
 void registerFunctionBuildId(FunctionFactory &);
 void registerFunctionUptime(FunctionFactory &);
 void registerFunctionTimeZone(FunctionFactory &);
@@ -103,6 +104,7 @@ void registerFunctionsMiscellaneous(FunctionFactory & factory)
     registerFunctionIfNotFinite(factory);
     registerFunctionThrowIf(factory);
     registerFunctionVersion(factory);
+    registerFunctionPreviousQueryId(factory);
     registerFunctionBuildId(factory);
     registerFunctionUptime(factory);
     registerFunctionTimeZone(factory);
