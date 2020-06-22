@@ -83,11 +83,13 @@ public:
 
     int serverError() const { return server_error; }
     int clientError() const { return client_error; }
+    String queryId() const { return query_id; }
 
 private:
     bool enabled = false;
     int server_error = 0;
     int client_error = 0;
+    String query_id;
 
     void parse(const String & hint)
     {
@@ -105,6 +107,8 @@ private:
                 ss >> server_error;
             else if (item == "clientError")
                 ss >> client_error;
+            else if (item == "queryId")
+                ss >> query_id;
         }
     }
 

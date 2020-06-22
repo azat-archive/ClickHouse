@@ -814,6 +814,7 @@ private:
                 TestHint test_hint(test_mode, str);
                 expected_client_error = test_hint.clientError();
                 expected_server_error = test_hint.serverError();
+                query_id = test_hint.queryId();
 
                 try
                 {
