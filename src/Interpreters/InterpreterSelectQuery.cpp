@@ -297,7 +297,10 @@ InterpreterSelectQuery::InterpreterSelectQuery(
 //=======
     ASTPtr row_policy_filter;
     if (storage)
+    {
         row_policy_filter = context->getRowPolicy()->getCondition(table_id.getDatabaseName(), table_id.getTableName(), RowPolicy::SELECT_FILTER);
+        row_policy_filter = RowPolicyContext::combineConditionsUsingAnd(row_policy_filter, context->getInitialRowPolicy()->getCondition(table_id.getDatabaseName(), table_id.getTableName(), RowPolicy::SELECT_FILTER));
+    }
 
     /// If allow_insecure_prewhere enabled, move row-policy filters into PREWHERE
     /// (WHERE cannot be used here, since it will introduce more security breaches)
@@ -368,10 +371,7 @@ InterpreterSelectQuery::InterpreterSelectQuery(
         {
             source_header = storage->getSampleBlockForColumns(required_columns);
 
-            /// Append columns from the table filter to required
-            row_policy_filter = context->getRowPolicy()->getCondition(table_id.getDatabaseName(), table_id.getTableName(), RowPolicy::SELECT_FILTER);
             /// Fix source_header for filter actions.
-            row_policy_filter = RowPolicyContext::combineConditionsUsingAnd(row_policy_filter, context->getInitialRowPolicy()->getCondition(table_id.getDatabaseName(), table_id.getTableName(), RowPolicy::SELECT_FILTER));
             if (row_policy_filter)
             {
                 filter_info = std::make_shared<FilterInfo>();
@@ -1126,6 +1126,8 @@ void InterpreterSelectQuery::executeFetchColumns(
         {
             /// Append columns from the table filter to required
             auto row_policy_filter = context->getRowPolicy()->getCondition(table_id.getDatabaseName(), table_id.getTableName(), RowPolicy::SELECT_FILTER);
+            row_policy_filter = RowPolicyContext::combineConditionsUsingAnd(row_policy_filter, context->getInitialRowPolicy()->getCondition(table_id.getDatabaseName(), table_id.getTableName(), RowPolicy::SELECT_FILTER));
+
             if (row_policy_filter)
             {
                 auto initial_required_columns = required_columns;
