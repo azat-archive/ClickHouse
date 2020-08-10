@@ -302,6 +302,8 @@ InterpreterSelectQuery::InterpreterSelectQuery(
         row_policy_filter = RowPolicyContext::combineConditionsUsingAnd(row_policy_filter, context->getInitialRowPolicy()->getCondition(table_id.getDatabaseName(), table_id.getTableName(), RowPolicy::SELECT_FILTER));
     }
 
+    /// Does the orignal query has PREWHERE (for optimize_move_to_prewhere check)
+    bool has_prewhere_in_query = !!query.prewhere();
     /// If allow_insecure_prewhere enabled, move row-policy filters into PREWHERE
     /// (WHERE cannot be used here, since it will introduce more security breaches)
     if (row_policy_filter && storage->supportsPrewhere() && context->getAllowInsecurePrewhere())
@@ -384,7 +386,7 @@ InterpreterSelectQuery::InterpreterSelectQuery(
             throw Exception("PREWHERE is not supported if the table is filtered by row-level security expression", ErrorCodes::ILLEGAL_PREWHERE);
 
         /// Calculate structure of the result.
-        result_header = getSampleBlockImpl(try_move_to_prewhere);
+        result_header = getSampleBlockImpl(try_move_to_prewhere, has_prewhere_in_query);
     };
 
     analyze();
@@ -484,7 +486,7 @@ QueryPipeline InterpreterSelectQuery::executeWithProcessors()
 }
 
 
-Block InterpreterSelectQuery::getSampleBlockImpl(bool try_move_to_prewhere)
+Block InterpreterSelectQuery::getSampleBlockImpl(bool try_move_to_prewhere, bool has_prewhere_in_query)
 {
     auto & query = getSelectQuery();
     const Settings & settings = context->getSettingsRef();
@@ -509,7 +511,7 @@ Block InterpreterSelectQuery::getSampleBlockImpl(bool try_move_to_prewhere)
                 current_info.sets = query_analyzer->getPreparedSets();
 
                 /// Try transferring some condition from WHERE to PREWHERE if enabled and viable
-                if (settings.optimize_move_to_prewhere && try_move_to_prewhere && query.where() && !query.prewhere() && !query.final())
+                if (settings.optimize_move_to_prewhere && try_move_to_prewhere && query.where() && !has_prewhere_in_query && !query.final())
                     MergeTreeWhereOptimizer{current_info, *context, merge_tree,
                                             syntax_analyzer_result->requiredSourceColumns(), log};
             };
