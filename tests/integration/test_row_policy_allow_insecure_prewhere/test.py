@@ -8,7 +8,7 @@ cluster = ClickHouseCluster(__file__)
 node = cluster.add_instance("node", config_dir="configs")
 
 def strip(s):
-    return re.sub(r'[\s]+', ' ', s.strip())
+    return re.sub(r'[\s]+', ' ', s.strip().replace('\\n', '\n'))
 
 @pytest.fixture(scope="module", autouse=True)
 def started_cluster():
@@ -37,6 +37,7 @@ def test_PREWHERE():
         'optimize_move_to_prewhere': 1,
         # enough to trigger an error if PREWHERE does not works
         'max_bytes_to_read': 1000 + 30,
+        'enable_debug_queries': 1,
     }
 
     # Check that filter does works
@@ -53,14 +54,14 @@ def test_PREWHERE():
 
     # PREWHERE and WHERE w/ optimize_move_to_prewhere
     node.query("SELECT s FROM mydb.prewhere_filter PREWHERE 1 WHERE c = 3 FORMAT Null", settings=settings)
-    # EXPLAIN PREWHERE and WHERE w/ optimize_move_to_prewhere
-    assert strip(node.query("EXPLAIN SYNTAX SELECT s FROM mydb.prewhere_no_filter WHERE b = 3 AND 1 = 1 AND c = 3", settings=settings)) == \
+    # ANALYZE PREWHERE and WHERE w/ optimize_move_to_prewhere
+    assert strip(node.query("ANALYZE SELECT s FROM mydb.prewhere_no_filter WHERE b = 3 AND 1 = 1 AND c = 3", settings=settings)) == \
         strip("""
         SELECT s
         FROM mydb.prewhere_no_filter
         PREWHERE (b = 3) AND (c = 3)
         """)
-    assert strip(node.query("EXPLAIN SYNTAX SELECT s FROM mydb.prewhere_filter WHERE c = 3", settings=settings)) == \
+    assert strip(node.query("ANALYZE SELECT s FROM mydb.prewhere_filter WHERE c = 3", settings=settings)) == \
         strip("""
         SELECT s
         FROM mydb.prewhere_filter
