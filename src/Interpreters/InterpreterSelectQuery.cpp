@@ -99,6 +99,10 @@
 #include <Processors/Pipe.h>
 #include <Processors/Executors/TreeExecutorBlockInputStream.h>
 
+namespace
+{
+const UInt64 OPTIMIZE_MOVE_TO_PREWHERE_ALWAYS = 2;
+}
 
 namespace DB
 {
@@ -314,6 +318,11 @@ InterpreterSelectQuery::InterpreterSelectQuery(
         else
             query.setExpression(ASTSelectQuery::Expression::PREWHERE, row_policy_filter->clone());
         row_policy_filter.reset();
+
+        /// To force optimize_move_to_prehwere even when PREWHERE exists (after optimization above)
+        /// for the underlying tables.
+        if (storage->isRemote())
+            context->setSetting("optimize_move_to_prewhere", OPTIMIZE_MOVE_TO_PREWHERE_ALWAYS);
     }
 
 //>>>>>>> e79460833d... Implement allow_insecure_prewhere server setting [DRAFT]
@@ -512,7 +521,10 @@ Block InterpreterSelectQuery::getSampleBlockImpl(bool try_move_to_prewhere, bool
                 current_info.sets = query_analyzer->getPreparedSets();
 
                 /// Try transferring some condition from WHERE to PREWHERE if enabled and viable
-                if (settings.optimize_move_to_prewhere && try_move_to_prewhere && query.where() && !has_prewhere_in_query && !query.final())
+                bool move_to_prewhere = try_move_to_prewhere && settings.optimize_move_to_prewhere;
+                if (move_to_prewhere && settings.optimize_move_to_prewhere != OPTIMIZE_MOVE_TO_PREWHERE_ALWAYS)
+                    move_to_prewhere = !has_prewhere_in_query;
+                if (move_to_prewhere && query.where() && !query.final())
                     MergeTreeWhereOptimizer{current_info, *context, merge_tree,
                                             syntax_analyzer_result->requiredSourceColumns(), log};
             };

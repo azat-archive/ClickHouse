@@ -87,7 +87,7 @@ struct Settings : public SettingsCollection<Settings>
     \
     M(SettingBool, distributed_directory_monitor_batch_inserts, false, "Should StorageDistributed DirectoryMonitors try to batch individual inserts into bigger ones.", 0) \
     \
-    M(SettingBool, optimize_move_to_prewhere, true, "Allows disabling WHERE to PREWHERE optimization in SELECT queries from MergeTree.", 0) \
+    M(SettingUInt64, optimize_move_to_prewhere, 1, "Allows disabling WHERE to PREWHERE optimization in SELECT queries from MergeTree, 2 - force move WHERE to PREWHERE even if if there is PREWHERE already.", 0) \
     \
     M(SettingUInt64, replication_alter_partitions_sync, 1, "Wait for actions to manipulate the partitions. 0 - do not wait, 1 - wait for execution only of itself, 2 - wait for everyone.", 0) \
     M(SettingUInt64, replication_alter_columns_timeout, 60, "Wait for actions to change the table structure within the specified number of seconds. 0 - wait unlimited time.", 0) \
