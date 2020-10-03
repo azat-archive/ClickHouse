@@ -1038,7 +1038,7 @@ private:
 
             try
             {
-                processParsedSingleQuery();
+                processParsedSingleQuery(test_hint.queryTimeout());
 
                 if (insert_ast && insert_ast->data)
                 {
@@ -1261,7 +1261,7 @@ private:
     // 'query_to_send' -- the query text that is sent to server,
     // 'full_query' -- for INSERT queries, contains the query and the data that
     // follow it. Its memory is referenced by ASTInsertQuery::begin, end.
-    void processParsedSingleQuery()
+    void processParsedSingleQuery(int query_timeout = 0)
     {
         resetOutput();
         last_exception_received_from_server.reset();
@@ -1313,7 +1313,7 @@ private:
                 processInsertQuery();
             }
             else
-                processOrdinaryQuery();
+                processOrdinaryQuery(query_timeout);
         }
 
         /// Do not change context (current DB, settings) in case of an exception.
@@ -1374,7 +1374,7 @@ private:
 
 
     /// Process the query that doesn't require transferring data blocks to the server.
-    void processOrdinaryQuery()
+    void processOrdinaryQuery(int query_timeout)
     {
         /// Rewrite query only when we have query parameters.
         /// Note that if query is rewritten, comments in query are lost.
@@ -1406,7 +1406,7 @@ private:
                     true);
 
                 sendExternalTables();
-                receiveResult();
+                receiveResult(query_timeout);
 
                 break;
             }
@@ -1623,7 +1623,7 @@ private:
 
     /// Receives and processes packets coming from server.
     /// Also checks if query execution should be cancelled.
-    void receiveResult()
+    void receiveResult(int query_timeout)
     {
         InterruptListener interrupt_listener;
         bool cancelled = false;
@@ -1635,6 +1635,7 @@ private:
         const size_t poll_interval
             = std::max(min_poll_interval, std::min<size_t>(receive_timeout.totalMicroseconds(), default_poll_interval));
 
+        Stopwatch query_watch(CLOCK_MONOTONIC_COARSE);
         while (true)
         {
             Stopwatch receive_watch(CLOCK_MONOTONIC_COARSE);
@@ -1674,6 +1675,19 @@ private:
                                       << " timeout is " << receive_timeout.totalSeconds() << " seconds." << std::endl;
 
                             cancel_query();
+                        }
+
+                        if (query_timeout)
+                        {
+                            double query_elapsed = query_watch.elapsedSeconds();
+                            if (query_elapsed > query_timeout)
+                            {
+                                std::cout << "Query timeout exceeded."
+                                          << " Waited for " << static_cast<size_t>(query_elapsed) << " seconds,"
+                                          << " timeout is " << query_timeout << " seconds." << std::endl;
+
+                                cancel_query();
+                            }
                         }
                     }
                 }
