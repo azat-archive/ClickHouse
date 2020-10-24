@@ -142,6 +142,8 @@ void StorageDistributedDirectoryMonitor::run()
 {
     std::unique_lock lock{mutex};
 
+    /// XXX too costly
+
     bool do_sleep = false;
     while (!quit)
     {
