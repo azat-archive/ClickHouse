@@ -11,6 +11,7 @@
 #include <Parsers/ASTTablesInSelectQuery.h>
 #include <Parsers/ExpressionListParsers.h>
 #include <Parsers/parseQuery.h>
+#include <Parsers/formatAST.h>
 
 #include <Access/AccessFlags.h>
 
@@ -642,6 +643,29 @@ static SortDescription getSortDescription(const ASTSelectQuery & query, const Co
     }
 
     return order_descr;
+}
+
+static SortDescription & sortDescriptionResolveAliases(SortDescription && sort_description, const StorageMetadataPtr & metadata_snapshot)
+{
+    auto sorting_key_columns = metadata_snapshot->getSortingKeyColumns();
+    auto all_columns = metadata_snapshot->getColumns();
+
+    for (const auto & alias_name : all_columns.getAliases())
+    {
+        auto & alias = all_columns.get(alias_name.name);
+        if (alias.default_desc.kind != ColumnDefaultKind::Alias)
+            continue;
+
+        const String & expression = serializeAST(*alias.default_desc.expression);
+        auto it = std::find(sorting_key_columns.begin(), sorting_key_columns.end(), expression);
+        if (it != sorting_key_columns.end())
+        {
+            size_t i = std::distance(it, sorting_key_columns.begin());
+            sort_description[i].column_name = expression;
+        }
+    }
+
+    return sort_description;
 }
 
 static SortDescription getSortDescriptionFromGroupBy(const ASTSelectQuery & query)
@@ -1445,12 +1469,12 @@ void InterpreterSelectQuery::executeFetchColumns(
             if (analysis_result.optimize_read_in_order)
                 query_info.order_optimizer = std::make_shared<ReadInOrderOptimizer>(
                     analysis_result.order_by_elements_actions,
-                    getSortDescription(query, *context),
+                    sortDescriptionResolveAliases(getSortDescription(query, *context), metadata_snapshot),
                     query_info.syntax_analyzer_result);
             else
                 query_info.order_optimizer = std::make_shared<ReadInOrderOptimizer>(
                     analysis_result.group_by_elements_actions,
-                    getSortDescriptionFromGroupBy(query),
+                    sortDescriptionResolveAliases(getSortDescriptionFromGroupBy(query), metadata_snapshot),
                     query_info.syntax_analyzer_result);
 
             query_info.input_order_info = query_info.order_optimizer->getInputOrder(metadata_snapshot);
