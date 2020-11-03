@@ -1,0 +1,24 @@
+(Expression)
+ExpressionTransform
+  (Expression)
+  ExpressionTransform
+    (Aggregating)
+    FinalizingSimpleTransform
+      AggregatingInOrderTransform
+        (Expression)
+        ExpressionTransform
+          (Expression)
+          ExpressionTransform
+            (ReadFromStorage)
+(Expression)
+ExpressionTransform
+  (Expression)
+  ExpressionTransform
+    (Aggregating)
+    FinalizingSimpleTransform
+      AggregatingInOrderTransform
+        (Expression)
+        ExpressionTransform
+          (Expression)
+          ExpressionTransform
+            (ReadFromStorage)
