@@ -6,8 +6,9 @@
 #include <Common/SipHash.h>
 #include <Common/quoteString.h>
 #include <Common/hex.h>
-#include <common/StringRef.h>
 #include <Common/ActionBlocker.h>
+#include <Common/createHardLink.h>
+#include <common/StringRef.h>
 #include <Interpreters/Context.h>
 #include <Interpreters/Cluster.h>
 #include <Storages/Distributed/DirectoryMonitor.h>
@@ -95,7 +96,9 @@ StorageDistributedDirectoryMonitor::StorageDistributedDirectoryMonitor(
     , metric_pending_files(CurrentMetrics::DistributedFilesToInsert, 0)
 {
     task_handle = bg_pool.createTask(getLoggerName() + "/Bg", [this]{ run(); });
-    task_handle->activateAndSchedule();
+    task_handle->activate();
+
+    Poco::File(path).createDirectory();
 }
 
 
@@ -633,6 +636,14 @@ bool StorageDistributedDirectoryMonitor::scheduleAfter(size_t ms)
     if (quit)
         return false;
     return task_handle->scheduleAfter(ms, false);
+}
+void StorageDistributedDirectoryMonitor::addFile(const std::string & from, const std::string & basename)
+{
+    {
+        std::unique_lock metrics_lock(metrics_mutex);
+        ++files_count;
+    }
+    createHardLink(from, path + "/" + basename);
 }
 
 StorageDistributedDirectoryMonitor::Status StorageDistributedDirectoryMonitor::getStatus() const

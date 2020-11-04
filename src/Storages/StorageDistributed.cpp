@@ -704,7 +704,8 @@ void StorageDistributed::createDirectoryMonitors(const std::string & disk)
             }
             else
             {
-                requireDirectoryMonitor(disk, dir_path.filename().string());
+                auto & monitor = requireDirectoryMonitor(disk, dir_path.filename().string());
+                monitor.scheduleAfter(0);
             }
         }
     }
@@ -732,7 +733,6 @@ void StorageDistributed::cleanOldMonitors()
         const auto & status = node_data.directory_monitor->getStatus();
         auto diff_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - status.last_active_time).count();
 
-        /// FIXME: is_empty() is racy with DistributedBlockOutputStream
         if (status.files_count == 0 && diff_ms > Int64(cleanup_meriod_ms) && std::filesystem::is_empty(status.path))
         {
             it = cluster_nodes_data.erase(it);

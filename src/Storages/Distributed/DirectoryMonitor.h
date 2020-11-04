@@ -41,6 +41,7 @@ public:
 
     /// For scheduling via DistributedBlockOutputStream
     bool scheduleAfter(size_t ms);
+    void addFile(const std::string & from, const std::string & basename);
 
     /// system.distribution_queue interface
     struct Status

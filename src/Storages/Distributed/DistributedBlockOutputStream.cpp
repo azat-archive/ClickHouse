@@ -27,7 +27,6 @@
 #include <Common/ProfileEvents.h>
 #include <Common/escapeForFileName.h>
 #include <Common/CurrentThread.h>
-#include <Common/createHardLink.h>
 #include <common/logger_useful.h>
 #include <ext/range.h>
 #include <ext/scope_guard.h>
@@ -556,28 +555,29 @@ void DistributedBlockOutputStream::writeToLocal(const Block & block, const size_
 
 void DistributedBlockOutputStream::writeToShard(const Block & block, const std::vector<std::string> & dir_names)
 {
-    /// tmp directory is used to ensure atomicity of transactions
-    /// and keep monitor thread out from reading incomplete data
-    std::string first_file_tmp_path{};
-
     auto reservation = storage.getStoragePolicy()->reserve(block.bytes());
     auto disk = reservation->getDisk()->getPath();
     auto data_path = storage.getRelativeDataPath();
+
+    /// tmp directory is used to ensure atomicity of transactions
+    /// and keep monitor thread out from reading incomplete data
+    const std::string tmp_path(disk + data_path + "/tmp/");
+    Poco::File(tmp_path).createDirectory();
+    const std::string first_file_name_base(toString(storage.file_names_increment.get()) + ".bin");
+    std::string first_file_tmp_path = tmp_path + first_file_name_base;
+
+    const auto sleep_ms = context.getSettingsRef().distributed_directory_monitor_sleep_time_ms;
+    auto make_monitor_for_file = [&](const String & dir_name, const String & block_file_path)
+    {
+        auto & directory_monitor = storage.requireDirectoryMonitor(disk, dir_name);
+        directory_monitor.addFile(first_file_tmp_path, block_file_path);
+        directory_monitor.scheduleAfter(sleep_ms.totalMilliseconds());
+    };
 
     auto it = dir_names.begin();
     /// on first iteration write block to a temporary directory for subsequent
     /// hardlinking to ensure the inode is not freed until we're done
     {
-        const std::string path(disk + data_path + *it);
-        Poco::File(path).createDirectory();
-
-        const std::string tmp_path(disk + data_path + "/tmp/");
-        Poco::File(tmp_path).createDirectory();
-
-        const std::string file_name(toString(storage.file_names_increment.get()) + ".bin");
-
-        first_file_tmp_path = tmp_path + file_name;
-
         /// Write batch to temporary location
         {
             WriteBufferFromFile out{first_file_tmp_path};
@@ -607,33 +607,21 @@ void DistributedBlockOutputStream::writeToShard(const Block & block, const std::
             stream.writeSuffix();
         }
 
-        // Create hardlink here to reuse increment number
-        const std::string block_file_path(path + '/' + file_name);
-        createHardLink(first_file_tmp_path, block_file_path);
+        // Schedule here to reuse increment number
+        make_monitor_for_file(*it, first_file_name_base);
     }
     ++it;
 
     /// Make hardlinks
     for (; it != dir_names.end(); ++it)
     {
-        const std::string path(disk + data_path + *it);
-        Poco::File(path).createDirectory();
-        const std::string block_file_path(path + '/' + toString(storage.file_names_increment.get()) + ".bin");
-
-        createHardLink(first_file_tmp_path, block_file_path);
+        const std::string current_file_name_base(toString(storage.file_names_increment.get()) + ".bin");
+        make_monitor_for_file(*it, current_file_name_base);
     }
 
     /// remove the temporary file, enabling the OS to reclaim inode after all threads
     /// have removed their corresponding files
     Poco::File(first_file_tmp_path).remove();
-
-    /// Notify
-    auto sleep_ms = context.getSettingsRef().distributed_directory_monitor_sleep_time_ms;
-    for (const auto & dir_name : dir_names)
-    {
-        auto & directory_monitor = storage.requireDirectoryMonitor(disk, dir_name);
-        directory_monitor.scheduleAfter(sleep_ms.totalMilliseconds());
-    }
 }
 
 
