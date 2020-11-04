@@ -682,8 +682,32 @@ void StorageDistributed::createDirectoryMonitors(const std::string & disk)
     std::filesystem::directory_iterator begin(path);
     std::filesystem::directory_iterator end;
     for (auto it = begin; it != end; ++it)
-        if (std::filesystem::is_directory(*it))
-            requireDirectoryMonitor(disk, it->path().filename().string());
+    {
+        const auto & dir_path = it->path();
+        if (std::filesystem::is_directory(dir_path))
+        {
+            if (std::filesystem::is_empty(dir_path))
+            {
+                /// Before directory clean (this code) the
+                /// DistributedBlockOutputStream was using "/tmp" inside each
+                /// shard, however the "/tmp" directory can be on per-disk basis
+                /// (and it is required to avoid races in cleanup),
+                /// since autoincrement global anyway.
+                ///
+                /// So this code just removes the tmp directory inside each shard
+                /// to make the directory itself clean.
+                ///
+                /// (And that's why there is no "/tmp" cleanup in the cleanOldMonitors())
+                std::filesystem::remove(dir_path / "tmp");
+                /// Will be created by DistributedBlockOutputStream on demand.
+                std::filesystem::remove(dir_path);
+            }
+            else
+            {
+                requireDirectoryMonitor(disk, dir_path.filename().string());
+            }
+        }
+    }
 }
 void StorageDistributed::cleanOldMonitors()
 {
