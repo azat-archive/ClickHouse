@@ -571,7 +571,7 @@ void DistributedBlockOutputStream::writeToShard(const Block & block, const std::
         const std::string path(disk + data_path + *it);
         Poco::File(path).createDirectory();
 
-        const std::string tmp_path(path + "/tmp/");
+        const std::string tmp_path(disk + data_path + "/tmp/");
         Poco::File(tmp_path).createDirectory();
 
         const std::string file_name(toString(storage.file_names_increment.get()) + ".bin");
