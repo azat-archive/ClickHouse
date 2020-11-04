@@ -1,0 +1,4 @@
+<yandex>
+    <!-- ASAP -->
+    <distributed_cleanup_period_ms>100</distributed_cleanup_period_ms>
+</yandex>
