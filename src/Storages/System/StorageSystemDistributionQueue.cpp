@@ -2,6 +2,7 @@
 #include <Columns/ColumnsNumber.h>
 #include <DataTypes/DataTypeString.h>
 #include <DataTypes/DataTypesNumber.h>
+#include <DataTypes/DataTypeDateTime.h>
 #include <Storages/System/StorageSystemDistributionQueue.h>
 #include <Storages/Distributed/DirectoryMonitor.h>
 #include <Storages/StorageDistributed.h>
@@ -25,6 +26,7 @@ NamesAndTypesList StorageSystemDistributionQueue::getNamesAndTypes()
         { "error_count",           std::make_shared<DataTypeUInt64>() },
         { "data_files",            std::make_shared<DataTypeUInt64>() },
         { "data_compressed_bytes", std::make_shared<DataTypeUInt64>() },
+        { "last_active_time",      std::make_shared<DataTypeDateTime>() },
         { "last_exception",        std::make_shared<DataTypeString>() },
     };
 }
@@ -100,6 +102,8 @@ void StorageSystemDistributionQueue::fillData(MutableColumns & res_columns, cons
 
         for (const auto & status : distributed_table.getDirectoryMonitorsStatuses())
         {
+            UInt64 last_active_time = static_cast<UInt64>(std::chrono::system_clock::to_time_t(status.last_active_time));
+
             size_t col_num = 0;
             res_columns[col_num++]->insert(database);
             res_columns[col_num++]->insert(table);
@@ -108,6 +112,7 @@ void StorageSystemDistributionQueue::fillData(MutableColumns & res_columns, cons
             res_columns[col_num++]->insert(status.error_count);
             res_columns[col_num++]->insert(status.files_count);
             res_columns[col_num++]->insert(status.bytes_count);
+            res_columns[col_num++]->insert(last_active_time);
 
             if (status.last_exception)
                 res_columns[col_num++]->insert(getExceptionMessage(status.last_exception, false));
