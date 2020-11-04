@@ -684,6 +684,12 @@ void StorageDistributed::createDirectoryMonitors(const std::string & disk)
     for (auto it = begin; it != end; ++it)
     {
         const auto & dir_path = it->path();
+        const auto & dir_base_name = dir_path.filename().string();
+
+        /// "tmp" is used by DistributedBlockOutputStream (common for all shards)
+        if (dir_base_name == "tmp")
+            continue;
+
         if (std::filesystem::is_directory(dir_path))
         {
             if (std::filesystem::is_empty(dir_path))
@@ -704,7 +710,7 @@ void StorageDistributed::createDirectoryMonitors(const std::string & disk)
             }
             else
             {
-                auto & monitor = requireDirectoryMonitor(disk, dir_path.filename().string());
+                auto & monitor = requireDirectoryMonitor(disk, dir_base_name);
                 monitor.scheduleAfter(0);
             }
         }
