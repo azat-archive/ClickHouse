@@ -281,6 +281,8 @@ std::map<UInt64, std::string> StorageDistributedDirectoryMonitor::getFiles()
         std::unique_lock metrics_lock(metrics_mutex);
         files_count = files.size();
         bytes_count = new_bytes_count;
+        if (files_count)
+            last_active_time = std::chrono::system_clock::now();
     }
 
     return files;
@@ -643,6 +645,7 @@ StorageDistributedDirectoryMonitor::Status StorageDistributedDirectoryMonitor::g
         error_count,
         files_count,
         bytes_count,
+        last_active_time,
         monitor_blocker.isCancelled(),
     };
 }

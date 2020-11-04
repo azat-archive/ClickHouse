@@ -97,6 +97,8 @@ public:
     void createDirectoryMonitors(const std::string & disk);
     /// ensure directory monitor thread and connectoin pool creation by disk and subdirectory name
     StorageDistributedDirectoryMonitor & requireDirectoryMonitor(const std::string & disk, const std::string & name);
+    /// Clean the monitors (and remove the underlying folder)
+    void cleanOldMonitors();
     /// Return list of metrics for all created monitors
     /// (note that monitors are created lazily, i.e. until at least one INSERT executed)
     std::vector<StorageDistributedDirectoryMonitor::Status> getDirectoryMonitorsStatuses() const;
@@ -188,6 +190,8 @@ protected:
     std::unordered_map<std::string, ClusterNodeData> cluster_nodes_data;
     mutable std::mutex cluster_nodes_mutex;
 
+    BackgroundSchedulePoolTaskHolder monitor_cleaner;
+    UInt64 cleanup_meriod_ms;
 };
 
 }

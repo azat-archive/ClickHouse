@@ -370,6 +370,7 @@ StorageDistributed::StorageDistributed(
     , cluster_name(global_context->getMacros()->expand(cluster_name_))
     , has_sharding_key(sharding_key_)
     , relative_data_path(relative_data_path_)
+    , cleanup_meriod_ms(global_context->getConfigRef().getUInt("distributed_cleanup_period_ms", 300'000))
 {
     StorageInMemoryMetadata storage_metadata;
     storage_metadata.setColumns(columns_);
@@ -390,6 +391,14 @@ StorageDistributed::StorageDistributed(
         if (storage_policy->getVolumes().size() > 1)
             LOG_WARNING(log, "Storage policy for Distributed table has multiple volumes. "
                              "Only {} volume will be used to store data. Other will be ignored.", data_volume->getName());
+
+        if (cleanup_meriod_ms)
+        {
+            auto & bg_pool = global_context->getDistributedSchedulePool();
+            monitor_cleaner = bg_pool.createTask(id_.getNameForLogs() + "/Cleaner", [this]{ cleanOldMonitors(); });
+            monitor_cleaner->activate();
+            monitor_cleaner->scheduleAfter(cleanup_meriod_ms);
+        }
     }
 
     /// Sanity check. Skip check if the table is already created to allow the server to start.
@@ -600,6 +609,9 @@ void StorageDistributed::shutdown()
 
     std::lock_guard lock(cluster_nodes_mutex);
 
+    if (monitor_cleaner)
+        monitor_cleaner->deactivate();
+
     LOG_DEBUG(log, "Joining background threads for async INSERT");
     cluster_nodes_data.clear();
     LOG_DEBUG(log, "Background threads for async INSERT joined");
@@ -672,6 +684,53 @@ void StorageDistributed::createDirectoryMonitors(const std::string & disk)
     for (auto it = begin; it != end; ++it)
         if (std::filesystem::is_directory(*it))
             requireDirectoryMonitor(disk, it->path().filename().string());
+}
+void StorageDistributed::cleanOldMonitors()
+{
+    if (monitors_blocker.isCancelled())
+    {
+        monitor_cleaner->scheduleAfter(cleanup_meriod_ms);
+        return;
+    }
+
+    std::lock_guard lock(cluster_nodes_mutex);
+
+    LOG_DEBUG(log, "Checking old directories (out from {})", cluster_nodes_data.size());
+    if (cluster_nodes_data.empty())
+        return;
+
+    const auto & now = std::chrono::system_clock::now();
+
+    auto it = cluster_nodes_data.begin();
+    while (it != cluster_nodes_data.end())
+    {
+        const auto & node_data = it->second;
+        const auto & status = node_data.directory_monitor->getStatus();
+        auto diff_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - status.last_active_time).count();
+
+        /// FIXME: is_empty() is racy with DistributedBlockOutputStream
+        if (status.files_count == 0 && diff_ms > Int64(cleanup_meriod_ms) && std::filesystem::is_empty(status.path))
+        {
+            it = cluster_nodes_data.erase(it);
+            LOG_DEBUG(log, "Stop monitoring {} (empty and no activity for {} ms)", status.path, cleanup_meriod_ms);
+            try
+            {
+                std::filesystem::remove(status.path);
+                LOG_DEBUG(log, "Removed {}", status.path, cleanup_meriod_ms);
+            }
+            catch (Exception & e)
+            {
+                e.addMessage("Cannot remove " + status.path);
+                tryLogCurrentException(__PRETTY_FUNCTION__);
+            }
+        }
+        else
+        {
+            ++it;
+        }
+    }
+
+    monitor_cleaner->scheduleAfter(cleanup_meriod_ms);
 }
 
 

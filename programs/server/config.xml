@@ -826,4 +826,7 @@
 
     <!-- Uncomment to disable ClickHouse internal DNS caching. -->
     <!-- <disable_internal_dns_cache>1</disable_internal_dns_cache> -->
+
+    <!-- Period for cleanin old directories that was created for async INSERT into Distributed -->
+    <!-- <distributed_cleanup_period_ms>300000</distributed_cleanup_period_ms> -->
 </yandex>

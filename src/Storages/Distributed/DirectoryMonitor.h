@@ -50,6 +50,7 @@ public:
         size_t error_count;
         size_t files_count;
         size_t bytes_count;
+        std::chrono::time_point<std::chrono::system_clock> last_active_time;
         bool is_blocked;
     };
     Status getStatus() const;
@@ -84,6 +85,7 @@ private:
     size_t error_count = 0;
     size_t files_count = 0;
     size_t bytes_count = 0;
+    std::chrono::time_point<std::chrono::system_clock> last_active_time{std::chrono::system_clock::now()};
     std::exception_ptr last_exception;
 
     const std::chrono::milliseconds default_sleep_time;
