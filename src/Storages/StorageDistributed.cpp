@@ -928,6 +928,9 @@ void StorageDistributed::flushClusterNodesAllData()
     /// TODO: Maybe it should be executed in parallel
     for (auto & node : cluster_nodes_data)
         node.second.flushAllData();
+
+    if (monitor_cleaner)
+        monitor_cleaner->schedule();
 }
 
 void StorageDistributed::rename(const String & new_path_to_table_data, const StorageID & new_table_id)
