@@ -112,14 +112,14 @@ static Block adaptBlockStructure(const Block & block, const Block & header)
             /// We expect constant column in block.
             /// If block is not empty, then get value for constant from it,
             /// because it may be different for remote server for functions like version(), uptime(), ...
-            if (block.rows() > 0 && block.has(elem.name))
+            if (block.rows() > 0 && block.columns() > res.columns())
             {
                 /// Const column is passed as materialized. Get first value from it.
                 ///
                 /// TODO: check that column contains the same value.
                 /// TODO: serialize const columns.
-                auto col = block.getByName(elem.name);
-                col.column = block.getByName(elem.name).column->cut(0, 1);
+                auto col = block.getByPosition(res.columns());
+                col.column = block.getByPosition(res.columns()).column->cut(0, 1);
 
                 column = castColumn(col, elem.type);
 
@@ -133,7 +133,7 @@ static Block adaptBlockStructure(const Block & block, const Block & header)
                 column = elem.column->cloneResized(block.rows());
         }
         else
-            column = castColumn(block.getByName(elem.name), elem.type);
+            column = castColumn(block.getByPosition(res.columns()), elem.type);
 
         res.insert({column, elem.type, elem.name});
     }
