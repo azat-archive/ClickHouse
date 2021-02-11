@@ -79,7 +79,7 @@ CERT=`$CLICKHOUSE_EXTRACT_CONFIG --key=openSSL.server.certificateFile`
 [ -n "$PRIVATEKEY" ] && [ -n "$CERT" ] && openssl req -subj "/CN=localhost" -new -newkey rsa:2048 -days 365 -nodes -x509 -keyout $PRIVATEKEY -out $CERT
 
 if [ "$TEST_GDB" ] || [ "$GDB" ]; then
-    echo -e "run \nset pagination off \nset logging file $LOG_DIR/server.gdb.log \nset logging on \nbacktrace \nthread apply all backtrace \nbacktrace \ndetach \nquit " > $DATA_DIR/gdb.cmd
+    echo -e "run \nset pagination off \nset logging file $LOG_DIR/server.gdb.log \nset logging on \nbacktrace \nthread apply all backtrace -full -frame-arguments all \nbacktrace \ndetach \nquit " > $DATA_DIR/gdb.cmd
     GDB=${GDB:="gdb -x $DATA_DIR/gdb.cmd --args "}
 fi
 

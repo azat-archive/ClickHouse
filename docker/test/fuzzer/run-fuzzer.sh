@@ -101,7 +101,7 @@ handle all noprint
 handle SIGSEGV stop print
 handle SIGBUS stop print
 continue
-thread apply all backtrace
+thread apply all backtrace -full -frame-arguments all
 continue
 " > script.gdb
 

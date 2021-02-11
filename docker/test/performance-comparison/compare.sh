@@ -285,7 +285,7 @@ function get_profiles_watchdog
 
     for pid in $(pgrep -f clickhouse)
     do
-        gdb -p "$pid" --batch --ex "info proc all" --ex "thread apply all bt" --ex quit &> "$pid.gdb.log" &
+        gdb -p "$pid" --batch --ex "info proc all" --ex "thread apply all backtrace -full -frame-arguments all" --ex quit &> "$pid.gdb.log" &
     done
     wait
 

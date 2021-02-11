@@ -11,7 +11,7 @@
 for i in "$@" ; do
     case $i in
     gdb)
-        sudo gdb -p $(pidof -s clickhouse-server) -batch -ex 'set pagination off' -ex 'thread apply all backtrace' -ex 'detach' -ex 'quit'
+        sudo gdb -p $(pidof -s clickhouse-server) -batch -ex 'set pagination off' -ex 'thread apply all backtrace -full -frame-arguments all' -ex 'detach' -ex 'quit'
         shift
     ;;
     system)
