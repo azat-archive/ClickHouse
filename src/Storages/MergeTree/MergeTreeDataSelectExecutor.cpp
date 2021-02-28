@@ -39,6 +39,7 @@
 #include <DataTypes/DataTypeUUID.h>
 #include <DataTypes/DataTypesNumber.h>
 #include <Storages/VirtualColumnUtils.h>
+#include <Parsers/formatAST.h>
 
 namespace ProfileEvents
 {
