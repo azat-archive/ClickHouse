@@ -435,6 +435,8 @@ struct ContextShared
 
         DatabaseCatalog::shutdown();
 
+        auto lock = std::lock_guard(mutex);
+
         /// Preemptive destruction is important, because these objects may have a refcount to ContextShared (cyclic reference).
         /// TODO: Get rid of this.
 
