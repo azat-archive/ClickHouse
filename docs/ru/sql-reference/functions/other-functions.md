@@ -1085,7 +1085,7 @@ SELECT * FROM table WHERE indexHint(<expression>)
 
 **Пример**
 
-Рассмотрим пример с использованием тестовых данных таблицы [ontime](../../getting_started/example_datasets/ontime.md).
+Рассмотрим пример с использованием тестовых данных таблицы [ontime](../../getting-started/example-datasets/ontime.md).
 
 Исходная таблица:
 

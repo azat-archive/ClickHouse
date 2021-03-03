@@ -489,7 +489,7 @@ FROM
 
 **示例**
 
-这是一个包含[ontime](../../getting_started/example_datasets/ontime.md)测试数据集的测试表。
+这是一个包含[ontime](../../getting-started/example-datasets/ontime.md)测试数据集的测试表。
 
 ```
 SELECT count() FROM ontime
