@@ -809,6 +809,8 @@ TreeRewriterResultPtr TreeRewriter::analyzeSelect(
 
     normalize(query, result.aliases, settings);
 
+    select_query->setExpression(ASTSelectQuery::Expression::WITH, {});
+
     /// Remove unneeded columns according to 'required_result_columns'.
     /// Leave all selected columns in case of DISTINCT; columns that contain arrayJoin function inside.
     /// Must be after 'normalizeTree' (after expanding aliases, for aliases not get lost)

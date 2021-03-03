@@ -43,10 +43,10 @@ bool ExecuteScalarSubqueriesMatcher::needChildVisit(ASTPtr & node, const ASTPtr 
     if (node->as<ASTTableExpression>())
         return false;
 
-    if (const auto * select = node->as<ASTSelectQuery>())
+    if (node->as<ASTSelectQuery>())
     {
-        /// Do not go to FROM, JOIN, UNION, WITH.
-        if (child->as<ASTTableExpression>() || child->as<ASTSelectQuery>() || child == select->with())
+        /// Do not go to FROM, JOIN, UNION.
+        if (child->as<ASTTableExpression>() || child->as<ASTSelectQuery>())
             return false;
     }
 
