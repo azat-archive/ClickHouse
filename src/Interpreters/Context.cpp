@@ -435,26 +435,31 @@ struct ContextShared
 
         DatabaseCatalog::shutdown();
 
-        auto lock = std::lock_guard(mutex);
+        std::optional<SystemLogs> system_logs_;
+        {
+            auto lock = std::lock_guard(mutex);
 
-        /// Preemptive destruction is important, because these objects may have a refcount to ContextShared (cyclic reference).
-        /// TODO: Get rid of this.
+            /// Preemptive destruction is important, because these objects may have a refcount to ContextShared (cyclic reference).
+            /// TODO: Get rid of this.
 
-        system_logs.reset();
-        embedded_dictionaries.reset();
-        external_dictionaries_loader.reset();
-        external_models_loader.reset();
-        buffer_flush_schedule_pool.reset();
-        schedule_pool.reset();
-        distributed_schedule_pool.reset();
-        message_broker_schedule_pool.reset();
-        ddl_worker.reset();
+            system_logs_ = std::move(system_logs);
+            embedded_dictionaries.reset();
+            external_dictionaries_loader.reset();
+            external_models_loader.reset();
+            buffer_flush_schedule_pool.reset();
+            schedule_pool.reset();
+            distributed_schedule_pool.reset();
+            message_broker_schedule_pool.reset();
+            ddl_worker.reset();
 
-        /// Stop trace collector if any
-        trace_collector.reset();
-        /// Stop zookeeper connection
-        zookeeper.reset();
+            /// Stop trace collector if any
+            trace_collector.reset();
+            /// Stop zookeeper connection
+            zookeeper.reset();
+        }
 
+        /// Can be removed w/o context lock
+        system_logs_.reset();
     }
 
     bool hasTraceCollector() const
