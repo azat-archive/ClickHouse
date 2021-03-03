@@ -960,6 +960,8 @@ bool KeyCondition::isKeyPossiblyWrappedByMonotonicFunctions(
     {
         const auto & args = (*it)->arguments->children;
         auto func_builder = FunctionFactory::instance().tryGet((*it)->name, context);
+        if (!func_builder)
+            return false;
         ColumnsWithTypeAndName arguments;
         ColumnWithTypeAndName const_arg;
         FunctionWithOptionalConstArg::Kind kind = FunctionWithOptionalConstArg::Kind::NO_CONST;
