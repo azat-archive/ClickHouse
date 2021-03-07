@@ -5,6 +5,7 @@
 #include <Interpreters/Cluster.h>
 #include <Interpreters/IInterpreter.h>
 #include <Interpreters/ProcessList.h>
+#include <Interpreters/OptimizeShardingKeyRewriteInVisitor.h>
 #include <Parsers/queryToString.h>
 #include <Processors/Pipe.h>
 #include <Processors/QueryPlan/QueryPlan.h>
@@ -86,7 +87,9 @@ std::shared_ptr<Context> updateSettingsForCluster(const Cluster & cluster, const
 void executeQuery(
     QueryPlan & query_plan,
     IStreamFactory & stream_factory, Poco::Logger * log,
-    const ASTPtr & query_ast, const Context & context, const SelectQueryInfo & query_info)
+    const ASTPtr & query_ast, const Context & context, const SelectQueryInfo & query_info,
+    const ExpressionActionsPtr & sharding_key_expr,
+    const ClusterPtr & not_optimized_cluster)
 {
     assert(log);
 
@@ -95,8 +98,6 @@ void executeQuery(
     std::vector<QueryPlanPtr> plans;
     Pipes remote_pipes;
     Pipes delayed_pipes;
-
-    const std::string query = queryToString(query_ast);
 
     auto new_context = updateSettingsForCluster(*query_info.cluster, context, settings, log);
 
@@ -117,9 +118,30 @@ void executeQuery(
     else
         throttler = user_level_throttler;
 
+    size_t shards = query_info.cluster->getShardCount();
     for (const auto & shard_info : query_info.cluster->getShardsInfo())
     {
-        stream_factory.createForShard(shard_info, query, query_ast,
+        ASTPtr query_ast_for_shard;
+        if (settings.optimize_skip_unused_shards && settings.optimize_skip_unused_shards_rewrite_in && shards > 1)
+        {
+            query_ast_for_shard = query_ast->clone();
+
+            OptimizeShardingKeyRewriteInVisitor::Data visitor_data{
+                sharding_key_expr,
+                shard_info,
+                not_optimized_cluster->getSlotToShard(),
+            };
+            OptimizeShardingKeyRewriteInVisitor visitor(visitor_data);
+            visitor.visit(query_ast_for_shard);
+        }
+        else
+            query_ast_for_shard = query_ast;
+
+        const String & query_for_shard = queryToString(query_ast_for_shard);
+
+        stream_factory.createForShard(shard_info,
+            query_for_shard, /// FIXME: unused
+            query_ast_for_shard,
             new_context, throttler, query_info, plans,
             remote_pipes, delayed_pipes, log);
     }
