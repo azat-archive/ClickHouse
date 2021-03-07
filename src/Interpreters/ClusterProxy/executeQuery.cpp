@@ -6,7 +6,6 @@
 #include <Interpreters/IInterpreter.h>
 #include <Interpreters/ProcessList.h>
 #include <Interpreters/OptimizeShardingKeyRewriteInVisitor.h>
-#include <Parsers/queryToString.h>
 #include <Processors/Pipe.h>
 #include <Processors/QueryPlan/QueryPlan.h>
 #include <Processors/QueryPlan/ReadFromPreparedSource.h>
@@ -137,10 +136,7 @@ void executeQuery(
         else
             query_ast_for_shard = query_ast;
 
-        const String & query_for_shard = queryToString(query_ast_for_shard);
-
         stream_factory.createForShard(shard_info,
-            query_for_shard, /// FIXME: unused
             query_ast_for_shard,
             new_context, throttler, query_info, plans,
             remote_pipes, delayed_pipes, log);
