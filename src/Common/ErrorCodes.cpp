@@ -584,7 +584,7 @@ namespace ErrorCodes
 
     ErrorCode end() { return END + 1; }
 
-    void increment(ErrorCode error_code, bool remote)
+    void increment(ErrorCode error_code, bool remote, const std::string & message)
     {
         if (error_code >= end())
         {
@@ -596,6 +596,8 @@ namespace ErrorCodes
         ValuePair inc_value{
             !remote, /* local */
             remote,  /* remote */
+            0,       /* last_error_time_ms */
+            message, /* message */
         };
         values[error_code].increment(inc_value);
     }
@@ -605,6 +607,7 @@ namespace ErrorCodes
     {
         local  += value.local;
         remote += value.remote;
+        message = value.message;
 
         const auto now = std::chrono::system_clock::now();
         last_error_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
