@@ -108,6 +108,9 @@ void QueryNormalizer::visit(ASTIdentifier & node, ASTPtr & ast, Data & data)
         }
         else
             ast = alias_node;
+
+        if (auto * ast_with_alias = dynamic_cast<ASTWithAlias *>(alias_node.get()))
+            ast_with_alias->used = true;
     }
 }
 

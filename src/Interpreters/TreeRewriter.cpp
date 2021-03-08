@@ -244,6 +244,32 @@ void renameDuplicatedColumns(const ASTSelectQuery * select_query)
     }
 }
 
+/// Aliases in WITH clause might not be referred by anyone. Remove them to avoid redundant analysis.
+void removeUnusedAliasesFromWithClause(ASTSelectQuery * select_query)
+{
+    auto new_with = select_query->with();
+
+    if (select_query->with())
+    {
+        ASTs & elements = select_query->with()->children;
+        elements.erase(
+            std::remove_if(
+                elements.begin(),
+                elements.end(),
+                [](const ASTPtr & elem)
+                {
+                    if (auto * ast_with_alias = dynamic_cast<ASTWithAlias *>(elem.get()))
+                        return !ast_with_alias->used;
+                    else
+                        return true; // ASTWithElement
+                }),
+            elements.end());
+
+        if (elements.empty())
+            select_query->setExpression(ASTSelectQuery::Expression::WITH, {});
+    }
+}
+
 /// Sometimes we have to calculate more columns in SELECT clause than will be returned from query.
 /// This is the case when we have DISTINCT or arrayJoin: we require more columns in SELECT even if we need less columns in result.
 /// Also we have to remove duplicates in case of GLOBAL subqueries. Their results are placed into tables so duplicates are impossible.
@@ -809,7 +835,7 @@ TreeRewriterResultPtr TreeRewriter::analyzeSelect(
 
     normalize(query, result.aliases, settings);
 
-    select_query->setExpression(ASTSelectQuery::Expression::WITH, {});
+    removeUnusedAliasesFromWithClause(select_query);
 
     /// Remove unneeded columns according to 'required_result_columns'.
     /// Leave all selected columns in case of DISTINCT; columns that contain arrayJoin function inside.
