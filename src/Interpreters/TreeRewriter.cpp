@@ -252,18 +252,13 @@ void removeUnusedAliasesFromWithClause(ASTSelectQuery * select_query)
     if (select_query->with())
     {
         ASTs & elements = select_query->with()->children;
-        elements.erase(
-            std::remove_if(
-                elements.begin(),
-                elements.end(),
-                [](const ASTPtr & elem)
-                {
-                    if (auto * ast_with_alias = dynamic_cast<ASTWithAlias *>(elem.get()))
-                        return !ast_with_alias->used;
-                    else
-                        return true; // ASTWithElement
-                }),
-            elements.end());
+        std::erase_if(elements, [](const ASTPtr & elem)
+        {
+            if (auto * ast_with_alias = dynamic_cast<ASTWithAlias *>(elem.get()))
+                return !ast_with_alias->used;
+            else
+                return true; // ASTWithElement
+        });
 
         if (elements.empty())
             select_query->setExpression(ASTSelectQuery::Expression::WITH, {});
