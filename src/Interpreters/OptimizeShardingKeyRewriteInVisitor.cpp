@@ -36,6 +36,11 @@ bool shardContains(
     const Cluster::ShardInfo & shard_info,
     const Cluster::SlotToShard & slots)
 {
+    /// NULL is not allowed in sharding key,
+    /// so it should be safe to assume that shard cannot contain it.
+    if (sharding_column_value.isNull())
+        return false;
+
     Field sharding_value = executeFunctionOnField(sharding_column_value, sharding_column_name, expr);
     UInt64 value = sharding_value.get<UInt64>();
     const auto shard_num = slots[value % slots.size()] + 1;
