@@ -18,6 +18,9 @@ public:
     /// Example: 'WITH pow(2, 2) as a SELECT pow(a, 2)' returns 'pow(a, 2)' instead of 'pow(pow(2, 2), 2)'
     bool prefer_alias_to_column_name = false;
 
+    /// If is true, the AST node is referred by others. This flag doesn't affect AST hash and is only used internally.
+    bool used = false;
+
     using IAST::IAST;
 
     void appendColumnName(WriteBuffer & ostr) const final;

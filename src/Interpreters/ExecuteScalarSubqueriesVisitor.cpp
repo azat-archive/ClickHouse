@@ -43,10 +43,6 @@ bool ExecuteScalarSubqueriesMatcher::needChildVisit(ASTPtr & node, const ASTPtr 
     if (node->as<ASTTableExpression>())
         return false;
 
-    /// Do not go to subqueries defined in with statement
-    if (node->as<ASTWithElement>())
-        return false;
-
     if (node->as<ASTSelectQuery>())
     {
         /// Do not go to FROM, JOIN, UNION.
