@@ -545,7 +545,8 @@ void StorageDistributed::read(
             header, processed_stage, StorageID{remote_database, remote_table}, scalars, has_virtual_shard_num_column, context.getExternalTables());
 
     ClusterProxy::executeQuery(query_plan, select_stream_factory, log,
-        modified_query_ast, context, query_info);
+        modified_query_ast, context, query_info, sharding_key_expr,
+        getCluster());
 }
 
 
