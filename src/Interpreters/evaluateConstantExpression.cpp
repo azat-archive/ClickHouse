@@ -312,8 +312,6 @@ std::optional<Blocks> evaluateExpressionOverConstantCondition(const ASTPtr & nod
 {
     Blocks result;
 
-    // TODO: `node` may be always-false literal.
-
     if (const auto * fn = node->as<ASTFunction>())
     {
         const auto dnf = analyzeFunction(fn, target_expr, limit);
@@ -371,6 +369,14 @@ std::optional<Blocks> evaluateExpressionOverConstantCondition(const ASTPtr & nod
                 return {};
             }
         }
+    }
+    else if (const auto * literal = node->as<ASTLiteral>())
+    {
+        // Check if it's always true or false.
+        if (literal->value.getType() == Field::Types::UInt64 && literal->value.get<UInt64>() == 0)
+            return {result};
+        else
+            return {};
     }
 
     return {result};
