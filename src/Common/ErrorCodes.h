@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <cstdint>
 #include <utility>
-#include <atomic>
+#include <mutex>
 #include <common/types.h>
 #include <string_view>
 
@@ -17,30 +17,44 @@ namespace DB
 namespace ErrorCodes
 {
     /// ErrorCode identifier (index in array).
-    using ErrorCode = size_t;
-    using Value = int;
+    using ErrorCode = int;
+    using Value = size_t;
 
     /// Get name of error_code by identifier.
     /// Returns statically allocated string.
     std::string_view getName(ErrorCode error_code);
 
+    struct ValuePair
+    {
+        Value local = 0;
+        Value remote = 0;
+        UInt64 error_time_ms = 0;
+        std::string message;
+        std::string stacktrace;
+
+        ValuePair & operator+=(const ValuePair & value);
+    };
+
+    /// Thread-safe
+    struct ValuePairHolder
+    {
+    public:
+        void increment(const ValuePair & value_);
+        ValuePair get();
+
+    private:
+        ValuePair value;
+        std::mutex mutex;
+    };
+
     /// ErrorCode identifier -> current value of error_code.
-    extern std::atomic<Value> values[];
+    extern ValuePairHolder values[];
 
     /// Get index just after last error_code identifier.
     ErrorCode end();
 
     /// Add value for specified error_code.
-    inline void increment(ErrorCode error_code)
-    {
-        if (error_code >= end())
-        {
-            /// For everything outside the range, use END.
-            /// (end() is the pointer pass the end, while END is the last value that has an element in values array).
-            error_code = end() - 1;
-        }
-        values[error_code].fetch_add(1, std::memory_order_relaxed);
-    }
+    void increment(ErrorCode error_code, bool remote, const std::string & message, const std::string & stacktrace);
 }
 
 }

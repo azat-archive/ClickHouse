@@ -1,4 +1,5 @@
 #include <Common/ErrorCodes.h>
+#include <chrono>
 
 /** Previously, these constants were located in one enum.
   * But in this case there is a problem: when you add a new constant, you need to recompile
@@ -561,8 +562,8 @@ namespace ErrorCodes
     APPLY_FOR_ERROR_CODES(M)
 #undef M
 
-    constexpr Value END = 3000;
-    std::atomic<Value> values[END + 1]{};
+    constexpr ErrorCode END = 3000;
+    ValuePairHolder values[END + 1]{};
 
     struct ErrorCodesNames
     {
@@ -577,12 +578,57 @@ namespace ErrorCodes
 
     std::string_view getName(ErrorCode error_code)
     {
-        if (error_code >= END)
+        if (error_code < 0 || error_code >= END)
             return std::string_view();
         return error_codes_names.names[error_code];
     }
 
     ErrorCode end() { return END + 1; }
+
+    void increment(ErrorCode error_code, bool remote, const std::string & message, const std::string & stacktrace)
+    {
+        if (error_code >= end())
+        {
+            /// For everything outside the range, use END.
+            /// (end() is the pointer pass the end, while END is the last value that has an element in values array).
+            error_code = end() - 1;
+        }
+
+        ValuePair inc_value{
+            !remote,    /* local */
+            remote,     /* remote */
+            0,          /* error_time_ms */
+            message,    /* message */
+            stacktrace, /* stacktrace */
+        };
+        values[error_code].increment(inc_value);
+    }
+
+    /// ValuePair
+    ValuePair & ValuePair::operator+=(const ValuePair & value)
+    {
+        local  += value.local;
+        remote += value.remote;
+        message = value.message;
+        stacktrace = value.stacktrace;
+
+        const auto now = std::chrono::system_clock::now();
+        error_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+
+        return *this;
+    }
+
+    /// ValuePairHolder
+    void ValuePairHolder::increment(const ValuePair & value_)
+    {
+        std::lock_guard lock(mutex);
+        value += value_;
+    }
+    ValuePair ValuePairHolder::get()
+    {
+        std::lock_guard lock(mutex);
+        return value;
+    }
 }
 
 }
