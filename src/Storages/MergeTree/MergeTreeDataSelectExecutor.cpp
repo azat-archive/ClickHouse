@@ -40,6 +40,7 @@
 #include <DataTypes/DataTypesNumber.h>
 #include <Storages/VirtualColumnUtils.h>
 #include <DataStreams/materializeBlock.h>
+#include <Parsers/formatAST.h>
 
 namespace ProfileEvents
 {
