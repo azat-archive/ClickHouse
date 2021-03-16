@@ -506,9 +506,17 @@ void HedgedConnections::finishProcessReplica(ReplicaState & replica, bool discon
     replica.packet_receiver->cancel();
     replica.change_replica_timeout.reset();
 
-    epoll.remove(replica.packet_receiver->getFileDescriptor());
-    --offset_states[fd_to_replica_location[replica.packet_receiver->getFileDescriptor()].offset].active_connection_count;
-    fd_to_replica_location.erase(replica.packet_receiver->getFileDescriptor());
+    int fd = replica.packet_receiver->getFileDescriptor();
+    epoll.remove(fd);
+
+    const auto & replica_location = fd_to_replica_location[fd];
+    if (replica_with_last_received_packet)
+    {
+        if (replica_with_last_received_packet.value() == replica_location)
+            replica_with_last_received_packet.reset();
+    }
+    --offset_states[replica_location.offset].active_connection_count;
+    fd_to_replica_location.erase(fd);
 
     epoll.remove(replica.change_replica_timeout.getDescriptor());
     timeout_fd_to_replica_location.erase(replica.change_replica_timeout.getDescriptor());

@@ -63,6 +63,11 @@ public:
     {
         size_t offset;
         size_t index;
+
+        bool operator==(const ReplicaLocation & rhs) const
+        {
+            return std::tie(offset, index) == std::tie(rhs.offset, rhs.index);
+        }
     };
 
     HedgedConnections(const ConnectionPoolWithFailoverPtr & pool_,
