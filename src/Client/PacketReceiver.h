@@ -33,6 +33,9 @@ public:
     /// Resume packet receiving.
     std::variant<int, Packet, Poco::Timespan> resume()
     {
+        if (!fiber)
+            return {};
+
         /// If there is no pending data, check receive timeout.
         if (!connection->hasReadPendingData() && !checkReceiveTimeout())
         {
